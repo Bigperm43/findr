@@ -328,7 +328,7 @@ function WatchlistModal({ existing, onSave, onClose, userTier = 'free' }) {
                 <label style={S.label}>Search Mode</label>
                 <select value={form.mode} onChange={e => set('mode', e.target.value)} style={{ ...S.input, appearance:'auto', color:'#09090B', background:'#FAFAFA' }}>
                   <option value="local">Local (Country)</option>
-                  <option value="global">Global (Worldwide)</option>
+                  {tier.countries === -1 && <option value="global">Global (Worldwide)</option>}
                 </select>
               </div>
               <div>
@@ -474,7 +474,11 @@ function LoginPage({ onLogin }) {
             )}
             {mode === 'register' && (
               <div style={{ marginTop:16, fontSize:12, color:'#52525B', textAlign:'center', lineHeight:1.6 }}>
-                By creating an account you agree to our Terms of Service and Privacy Policy. Free accounts include 3 searches/month.
+                By creating an account you agree to our{' '}
+                <a href="/terms.html" target="_blank" style={{ color:'#A78BFA', textDecoration:'none' }}>Terms of Service</a>
+                {' '}and{' '}
+                <a href="/privacy.html" target="_blank" style={{ color:'#A78BFA', textDecoration:'none' }}>Privacy Policy</a>.
+                Free accounts include 3 searches/month.
               </div>
             )}
           </div>
