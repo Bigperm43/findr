@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import api from './api';
 
 const TIERS = {
-  free:     { name: 'Free',     price: 0,     watchlists: 1,  countries: -1, scanMins: 60, matches: 50,  wtb: 2,   color: '#6B7280' },
-  hunter:   { name: 'Hunter',   price: 9.99,  watchlists: 5,  countries: 5,  scanMins: 15, matches: -1,  wtb: 10,  color: '#8B5CF6' },
-  predator: { name: 'Predator', price: 24.99, watchlists: 20, countries: -1, scanMins: 5,  matches: -1,  wtb: 50,  color: '#06B6D4' },
-  pro:      { name: 'Pro',      price: 59.99, watchlists: -1, countries: -1, scanMins: 5,  matches: -1,  wtb: 100, color: '#F59E0B' },
+  free:     { name: 'Free',     price: 0,     watchlists: 3,   countries: 1,  scanMins: 1440, matches: -1, wtb: 1,   color: '#6B7280' },
+  hunter:   { name: 'Hunter',   price: 9.99,  watchlists: 15,  countries: 5,  scanMins: 60,   matches: -1, wtb: 10,  color: '#8B5CF6' },
+  predator: { name: 'Predator', price: 24.99, watchlists: 50,  countries: -1, scanMins: 15,   matches: -1, wtb: 50,  color: '#06B6D4' },
+  pro:      { name: 'Pro',      price: 59.99, watchlists: 150, countries: -1, scanMins: 5,    matches: -1, wtb: 100, color: '#F59E0B' },
 };
 
 const COUNTRIES = [
@@ -15,9 +15,8 @@ const COUNTRIES = [
   'Singapore','India','Brazil','Mexico','UAE','South Africa'
 ];
 
-const SCORE_SHOW = 60;    // show normally
-const SCORE_PROMPT = 35;  // hold back, prompt user
-// below 35 = dropped entirely
+const SCORE_SHOW = 60;
+const SCORE_PROMPT = 35;
 
 const S = {
   app: { minHeight:'100vh', background:'#09090B', color:'#FAFAFA', fontFamily:"'DM Sans', system-ui, sans-serif", display:'flex', flexDirection:'column' },
@@ -27,7 +26,7 @@ const S = {
   btnPrimary: { background:'linear-gradient(135deg, #7C3AED, #2563EB)', border:'none', borderRadius:12, color:'#fff', fontSize:14, fontWeight:600, padding:'11px 20px', cursor:'pointer', display:'flex', alignItems:'center', gap:7, transition:'opacity 0.2s' },
   btnGhost: { background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, color:'#A1A1AA', fontSize:13, fontWeight:500, padding:'8px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:6, transition:'all 0.2s' },
   btnDanger: { background:'rgba(239,68,68,0.1)', border:'1px solid rgba(239,68,68,0.25)', borderRadius:10, color:'#F87171', fontSize:13, fontWeight:500, padding:'8px 14px', cursor:'pointer', display:'flex', alignItems:'center', gap:6 },
-  input: { width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, color:'#FAFAFA', fontSize:14, padding:'11px 14px', outline:'none', boxSizing:'border-box', fontFamily:"inherit" },
+  input: { width:'100%', background:'rgba(255,255,255,0.05)', border:'1px solid rgba(255,255,255,0.1)', borderRadius:10, color:'#FAFAFA', fontSize:14, padding:'11px 14px', outline:'none', boxSizing:'border-box', fontFamily:'inherit' },
   label: { display:'block', fontSize:11, fontWeight:600, letterSpacing:1.2, textTransform:'uppercase', color:'#71717A', marginBottom:7 },
   tag: { display:'inline-flex', alignItems:'center', gap:4, fontSize:11, fontWeight:600, padding:'3px 10px', borderRadius:20, letterSpacing:0.3 },
   muted: { color:'#71717A', fontSize:13 },
@@ -59,7 +58,7 @@ const Icon = ({ n, s=16 }) => {
   return <svg {...p}>{icons[n]}</svg>;
 };
 
-const BACKEND = 'http://localhost:3001';
+const BACKEND = 'https://findr-production-0355.up.railway.app';
 
 async function parseWTBAd(text) {
   const response = await fetch(`${BACKEND}/api/parse-wtb`, {
@@ -137,10 +136,10 @@ function NotificationPanel({ onClose }) {
 
 function PricingPage({ currentTier = 'free', onClose }) {
   const tiers = [
-    { key:'free', features:['1 watchlist', 'All countries', 'Scan every 60 min', '50 matches/month', '2 WTB parses/month', '2 Photo searches/month', 'In-app notifications'] },
-    { key:'hunter', features:['5 watchlists', '5 countries', 'Scan every 15 min', 'Unlimited matches', 'Email notifications', '10 WTB AI parses/month', '10 Photo searches/month'] },
-    { key:'predator', features:['20 watchlists', 'All countries + global', 'Scan every 5 min', 'Unlimited matches', 'Email notifications', '50 WTB AI parses/month', '50 Photo searches/month'] },
-    { key:'pro', features:['Unlimited watchlists', 'All countries + global', 'Scan every 5 min', 'Unlimited matches', 'Email + SMS notifications', '100 WTB AI parses/month', '100 Photo searches/month', 'API access'] },
+    { key:'free', features:['3 searches/month', '1 country only', 'Scan every 24 hrs', '1 WTB AI parse/month', 'In-app notifications'] },
+    { key:'hunter', features:['15 searches/month', '5 countries', 'Scan every 60 min', 'Instant in-app notifications', '10 WTB AI parses/month', '10 Photo searches/month'] },
+    { key:'predator', features:['50 searches/month', 'All countries + global', 'Scan every 15 min', 'Instant in-app notifications', '50 WTB AI parses/month', '50 Photo searches/month'] },
+    { key:'pro', features:['150 searches/month', 'All countries + global', 'Scan every 5 min', 'Instant in-app notifications', '100 WTB AI parses/month', '100 Photo searches/month', 'API access'] },
   ];
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:20, overflowY:'auto' }}>
@@ -183,8 +182,7 @@ function PricingPage({ currentTier = 'free', onClose }) {
   );
 }
 
-// ─── PHOTO MODAL ──────────────────────────────────────────────────────────────
-function PhotoModal({ onParsed, onClose, tier }) {
+function PhotoModal({ onParsed, onClose }) {
   const [preview, setPreview] = useState(null);
   const [imageData, setImageData] = useState(null);
   const [mimeType, setMimeType] = useState('image/jpeg');
@@ -192,38 +190,26 @@ function PhotoModal({ onParsed, onClose, tier }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const fileRef = useRef(null);
-
   const handleFile = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setMimeType(file.type);
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      const result = ev.target.result;
-      setPreview(result);
-      setImageData(result.split(',')[1]);
-    };
+    reader.onload = (ev) => { const result = ev.target.result; setPreview(result); setImageData(result.split(',')[1]); };
     reader.readAsDataURL(file);
   };
-
   const analyse = async () => {
     if (!imageData) return;
     setLoading(true); setError('');
-    try {
-      const result = await parsePhoto(imageData, mimeType, description);
-      onParsed(result);
-    } catch {
-      setError('Failed to analyse photo. Try a clearer image.');
-    } finally { setLoading(false); }
+    try { const result = await parsePhoto(imageData, mimeType, description); onParsed(result); }
+    catch { setError('Failed to analyse photo. Try a clearer image.'); }
+    finally { setLoading(false); }
   };
-
   return (
     <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.9)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2000, padding:20 }}>
       <div style={{ ...S.card, width:'100%', maxWidth:540, background:'#111113', border:'1px solid rgba(255,255,255,0.1)' }}>
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-          <div style={{ fontSize:16, fontWeight:700, display:'flex', alignItems:'center', gap:8 }}>
-            <span style={{ color:'#38BDF8' }}><Icon n="camera" s={16} /></span> Photo Search
-          </div>
+          <div style={{ fontSize:16, fontWeight:700, display:'flex', alignItems:'center', gap:8 }}><span style={{ color:'#38BDF8' }}><Icon n="camera" s={16} /></span> Photo Search</div>
           <button onClick={onClose} style={{ ...S.btnGhost, padding:'4px 8px' }}><Icon n="x" /></button>
         </div>
         <div style={{ fontSize:13, color:'#71717A', marginBottom:16 }}>Upload a photo AND add a description for best results — AI uses both together.</div>
@@ -234,7 +220,7 @@ function PhotoModal({ onParsed, onClose, tier }) {
         {preview && <button onClick={() => { setPreview(null); setImageData(null); }} style={{ ...S.btnGhost, marginBottom:12, fontSize:12 }}><Icon n="x" s={12} /> Remove photo</button>}
         <div style={{ marginBottom:12 }}>
           <label style={S.label}>Describe what you're looking for (recommended)</label>
-          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...S.input, resize:'vertical', fontSize:13, lineHeight:1.5 }} placeholder="e.g. fertiliser/manure spreader body for truck, 6-8 cubic meters, fair to good condition..." />
+          <textarea value={description} onChange={e => setDescription(e.target.value)} rows={3} style={{ ...S.input, resize:'vertical', fontSize:13, lineHeight:1.5 }} placeholder="e.g. vintage rolex submariner, good condition..." />
           <div style={{ fontSize:11, color:'#52525B', marginTop:4 }}>Your description takes priority over what AI sees in the photo</div>
         </div>
         {error && <div style={{ color:'#F87171', fontSize:12, marginBottom:8 }}>{error}</div>}
@@ -249,7 +235,6 @@ function PhotoModal({ onParsed, onClose, tier }) {
   );
 }
 
-// ─── WTB MODAL ────────────────────────────────────────────────────────────────
 function WTBModal({ onParsed, onClose }) {
   const [text, setText] = useState('');
   const [loading, setLoading] = useState(false);
@@ -282,7 +267,6 @@ function WTBModal({ onParsed, onClose }) {
   );
 }
 
-// ─── WATCHLIST MODAL ──────────────────────────────────────────────────────────
 function WatchlistModal({ existing, onSave, onClose, userTier = 'free' }) {
   const tier = TIERS[userTier] || TIERS.free;
   const [form, setForm] = useState({ name: existing?.name || '', description: existing?.description || '', keywords: existing?.keywords || '', price_min: existing?.price_min || '', price_max: existing?.price_max || '', country: existing?.country || 'any', mode: existing?.mode || 'local' });
@@ -291,12 +275,10 @@ function WatchlistModal({ existing, onSave, onClose, userTier = 'free' }) {
   const [showWTB, setShowWTB] = useState(false);
   const [showPhoto, setShowPhoto] = useState(false);
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
-
   const handleParsed = (parsed) => {
     setForm(f => ({ ...f, name: parsed.name || f.name, keywords: parsed.keywords || f.keywords, price_min: parsed.price_min || f.price_min, price_max: parsed.price_max || f.price_max, country: parsed.country || f.country, mode: parsed.mode || f.mode, description: parsed.description || f.description }));
     setShowWTB(false); setShowPhoto(false);
   };
-
   const submit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
     try {
@@ -306,13 +288,11 @@ function WatchlistModal({ existing, onSave, onClose, userTier = 'free' }) {
     } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
-
   const countryOptions = tier.countries === -1 ? COUNTRIES : COUNTRIES.slice(0, tier.countries + 1);
-
   return (
     <>
       {showWTB && <WTBModal onParsed={handleParsed} onClose={() => setShowWTB(false)} />}
-      {showPhoto && <PhotoModal onParsed={handleParsed} onClose={() => setShowPhoto(false)} tier={userTier} />}
+      {showPhoto && <PhotoModal onParsed={handleParsed} onClose={() => setShowPhoto(false)} />}
       <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1000, padding:20 }}>
         <div style={{ ...S.card, width:'100%', maxWidth:520, background:'#111113', border:'1px solid rgba(255,255,255,0.1)', maxHeight:'90vh', overflowY:'auto' }}>
           <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
@@ -380,7 +360,6 @@ function WatchlistModal({ existing, onSave, onClose, userTier = 'free' }) {
   );
 }
 
-// ─── MATCH CARD ───────────────────────────────────────────────────────────────
 function MatchCard({ match: m, onFeedback, dimmed = false }) {
   const [loading, setLoading] = useState(false);
   const fb = async (feedback) => { setLoading(true); await onFeedback(m.id, feedback); setLoading(false); };
@@ -421,17 +400,32 @@ function MatchCard({ match: m, onFeedback, dimmed = false }) {
 }
 
 function LoginPage({ onLogin }) {
-  const [email, setEmail] = useState('admin@middlemen.local');
-  const [password, setPassword] = useState('password123');
+  const [mode, setMode] = useState('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+
   const submit = async (e) => {
     e.preventDefault(); setLoading(true); setError('');
-    try { const { token, user } = await api.login(email, password); localStorage.setItem('mm_token', token); onLogin(user); }
-    catch (err) { setError(err.message); }
+    try {
+      if (mode === 'register') {
+        if (password !== confirmPassword) { setError('Passwords do not match'); setLoading(false); return; }
+        if (password.length < 8) { setError('Password must be at least 8 characters'); setLoading(false); return; }
+        const { token, user } = await api.register(email, password);
+        localStorage.setItem('mm_token', token);
+        onLogin(user);
+      } else {
+        const { token, user } = await api.login(email, password);
+        localStorage.setItem('mm_token', token);
+        onLogin(user);
+      }
+    } catch (err) { setError(err.message); }
     finally { setLoading(false); }
   };
+
   return (
     <div style={{ minHeight:'100vh', background:'#09090B', display:'flex', flexDirection:'column' }}>
       {showPricing && <PricingPage onClose={() => setShowPricing(false)} />}
@@ -447,17 +441,45 @@ function LoginPage({ onLogin }) {
             <div style={{ fontSize:36, fontWeight:800, letterSpacing:-1.5, background:'linear-gradient(135deg, #A78BFA, #38BDF8)', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', marginBottom:8 }}>Findr</div>
             <div style={{ fontSize:14, color:'#71717A', letterSpacing:0.5 }}>Find anything. Anywhere. Instantly.</div>
           </div>
+          <div style={{ display:'flex', background:'rgba(255,255,255,0.04)', borderRadius:12, padding:4, marginBottom:24 }}>
+            {['login','register'].map(m => (
+              <button key={m} onClick={() => { setMode(m); setError(''); }} style={{ flex:1, padding:'10px', borderRadius:9, border:'none', cursor:'pointer', fontSize:14, fontWeight:600, transition:'all 0.2s', background: mode === m ? 'rgba(124,58,237,0.3)' : 'transparent', color: mode === m ? '#A78BFA' : '#71717A' }}>
+                {m === 'login' ? 'Sign In' : 'Create Account'}
+              </button>
+            ))}
+          </div>
           <div style={{ ...S.card, background:'rgba(255,255,255,0.03)', border:'1px solid rgba(255,255,255,0.08)', padding:28 }}>
             <form onSubmit={submit}>
-              <div style={{ marginBottom:16 }}><label style={S.label}>Email</label><input value={email} onChange={e => setEmail(e.target.value)} type="email" required style={S.input} /></div>
-              <div style={{ marginBottom:24 }}><label style={S.label}>Password</label><input value={password} onChange={e => setPassword(e.target.value)} type="password" required style={S.input} /></div>
-              {error && <div style={{ color:'#F87171', fontSize:13, marginBottom:14 }}>{error}</div>}
-              <button type="submit" disabled={loading} style={{ ...S.btnPrimary, width:'100%', justifyContent:'center', fontSize:15, padding:'13px 20px' }}>{loading ? 'Signing in...' : 'Sign In'}</button>
+              <div style={{ marginBottom:16 }}>
+                <label style={S.label}>Email</label>
+                <input value={email} onChange={e => setEmail(e.target.value)} type="email" required style={S.input} placeholder="you@example.com" />
+              </div>
+              <div style={{ marginBottom: mode === 'register' ? 16 : 24 }}>
+                <label style={S.label}>Password</label>
+                <input value={password} onChange={e => setPassword(e.target.value)} type="password" required style={S.input} placeholder={mode === 'register' ? 'At least 8 characters' : '••••••••'} />
+              </div>
+              {mode === 'register' && (
+                <div style={{ marginBottom:24 }}>
+                  <label style={S.label}>Confirm Password</label>
+                  <input value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} type="password" required style={S.input} placeholder="••••••••" />
+                </div>
+              )}
+              {error && <div style={{ color:'#F87171', fontSize:13, marginBottom:14, padding:'10px 14px', background:'rgba(239,68,68,0.08)', borderRadius:8, border:'1px solid rgba(239,68,68,0.2)' }}>{error}</div>}
+              <button type="submit" disabled={loading} style={{ ...S.btnPrimary, width:'100%', justifyContent:'center', fontSize:15, padding:'13px 20px' }}>
+                {loading ? (mode === 'register' ? 'Creating account...' : 'Signing in...') : (mode === 'register' ? 'Create Free Account' : 'Sign In')}
+              </button>
             </form>
-            <div style={{ marginTop:16, padding:12, background:'rgba(255,255,255,0.03)', borderRadius:10, fontSize:12, color:'#52525B', fontFamily:'monospace' }}>admin@middlemen.local / password123</div>
+            {mode === 'login' && (
+              <div style={{ marginTop:16, padding:12, background:'rgba(255,255,255,0.03)', borderRadius:10, fontSize:12, color:'#52525B', fontFamily:'monospace' }}>admin@middlemen.local / password123</div>
+            )}
+            {mode === 'register' && (
+              <div style={{ marginTop:16, fontSize:12, color:'#52525B', textAlign:'center', lineHeight:1.6 }}>
+                By creating an account you agree to our Terms of Service and Privacy Policy. Free accounts include 3 searches/month.
+              </div>
+            )}
           </div>
           <div style={{ display:'flex', gap:8, justifyContent:'center', marginTop:24, flexWrap:'wrap' }}>
-            {['🌍 20+ Countries', '⚡ 5-min scans', '🤖 AI WTB Parser', '📸 Photo Search', '🔔 Instant alerts'].map(f => (
+            {['🌍 20+ Countries', '⚡ Real-time scans', '🤖 AI WTB Parser', '📸 Photo Search', '🔔 Instant alerts'].map(f => (
               <span key={f} style={{ fontSize:12, color:'#71717A', background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.08)', borderRadius:20, padding:'4px 12px' }}>{f}</span>
             ))}
           </div>
@@ -529,19 +551,10 @@ function Dashboard({ user, onLogout }) {
   const scanStatus = stats?.scanStatus;
   const atWatchlistLimit = tier.watchlists !== -1 && watchlists.length >= tier.watchlists;
 
-  // Score filtering
   const goodMatches = matches.filter(m => m.score >= SCORE_SHOW);
   const lowMatches = matches.filter(m => m.score >= SCORE_PROMPT && m.score < SCORE_SHOW);
-
-  // Group low confidence by watchlist for per-watchlist prompts
   const lowByWatchlist = {};
-  lowMatches.forEach(m => {
-    const key = m.watchlist_id || 'all';
-    if (!lowByWatchlist[key]) lowByWatchlist[key] = [];
-    lowByWatchlist[key].push(m);
-  });
-
-  const visibleLowMatches = lowMatches.filter(m => showLowConfidence[m.watchlist_id || 'all']);
+  lowMatches.forEach(m => { const key = m.watchlist_id || 'all'; if (!lowByWatchlist[key]) lowByWatchlist[key] = []; lowByWatchlist[key].push(m); });
 
   return (
     <div style={S.app}>
@@ -586,7 +599,6 @@ function Dashboard({ user, onLogout }) {
       </div>
 
       <main style={{ flex:1, padding:24, maxWidth:1000, width:'100%', margin:'0 auto', position:'relative', zIndex:1 }}>
-
         {tab === 'watchlists' && (
           <div>
             <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:24 }}>
@@ -634,8 +646,6 @@ function Dashboard({ user, onLogout }) {
                       {wl.unseen_count > 0 && <div style={{ fontSize:12, color:'#F59E0B', marginTop:2 }}>{wl.unseen_count} new</div>}
                     </div>
                   </div>
-
-                  {/* Status message */}
                   {wl.status === 'active' && wl.match_count === 0 && !hasBeenScanned && (
                     <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(167,139,250,0.05)', border:'1px solid rgba(167,139,250,0.1)', borderRadius:10, fontSize:12, color:'#71717A' }}>
                       ⏳ First scan in progress — we'll notify you the moment something appears.
@@ -643,10 +653,9 @@ function Dashboard({ user, onLogout }) {
                   )}
                   {wl.status === 'active' && wl.match_count === 0 && hasBeenScanned && (
                     <div style={{ marginTop:12, padding:'10px 14px', background:'rgba(245,158,11,0.05)', border:'1px solid rgba(245,158,11,0.15)', borderRadius:10, fontSize:12, color:'#A78BFA', lineHeight:1.6 }}>
-                      🔍 No matching listings found yet — we scanned and came up empty this time. Findr will keep checking every {tier.scanMins} minutes and notify you the moment something matching comes up.
+                      🔍 No matching listings found yet — Findr will keep checking every {tier.scanMins} minutes and notify you the moment something comes up.
                     </div>
                   )}
-
                   <div style={{ display:'flex', gap:8, marginTop:16, paddingTop:16, borderTop:'1px solid rgba(255,255,255,0.05)', flexWrap:'wrap' }}>
                     <button onClick={() => scanOne(wl.id)} disabled={scanningId === wl.id} style={S.btnGhost}><Icon n="refresh" s={12} /> {scanningId === wl.id ? 'Scanning...' : 'Scan Now'}</button>
                     <button onClick={() => { setSelectedWl(wl.id); setTab('matches'); api.markSeen(wl.id); }} style={S.btnGhost}><Icon n="eye" s={12} /> View Results</button>
@@ -661,7 +670,7 @@ function Dashboard({ user, onLogout }) {
             {atWatchlistLimit && (
               <div style={{ ...S.card, background:'linear-gradient(135deg, rgba(124,58,237,0.08), rgba(56,189,248,0.05))', border:'1px solid rgba(167,139,250,0.2)', textAlign:'center', padding:28 }}>
                 <div style={{ fontSize:16, fontWeight:700, marginBottom:8 }}>You've reached your search limit</div>
-                <div style={{ fontSize:13, color:'#71717A', marginBottom:16 }}>Upgrade to Hunter for 5 searches, or Predator for 20.</div>
+                <div style={{ fontSize:13, color:'#71717A', marginBottom:16 }}>Upgrade to Hunter for 15 searches, or Predator for 50.</div>
                 <button onClick={() => setShowPricing(true)} style={{ ...S.btnPrimary, margin:'0 auto', justifyContent:'center' }}><Icon n="crown" s={14} /> View Plans</button>
               </div>
             )}
@@ -687,20 +696,14 @@ function Dashboard({ user, onLogout }) {
                 </button>
               ))}
             </div>
-
-            {/* No results state */}
             {goodMatches.length === 0 && lowMatches.length === 0 && (
               <div style={{ ...S.card, padding:56, textAlign:'center' }}>
                 <div style={{ fontSize:36, marginBottom:12 }}>🔍</div>
                 <div style={{ fontSize:16, fontWeight:700, marginBottom:6 }}>No matching listings found yet</div>
-                <div style={{ fontSize:13, color:'#71717A', lineHeight:1.7 }}>We've searched the web but haven't found anything that matches your criteria yet. Findr will keep scanning every {tier.scanMins} minutes and notify you the moment something comes up.</div>
+                <div style={{ fontSize:13, color:'#71717A', lineHeight:1.7 }}>We've searched the web but haven't found anything yet. Findr will keep scanning every {tier.scanMins} minutes and notify you the moment something comes up.</div>
               </div>
             )}
-
-            {/* Good matches */}
             {goodMatches.map(m => <MatchCard key={m.id} match={m} onFeedback={handleFeedback} />)}
-
-            {/* Low confidence prompt — grouped by watchlist */}
             {Object.entries(lowByWatchlist).map(([wlKey, items]) => {
               const isShowing = showLowConfidence[wlKey];
               const wlName = items[0]?.watchlist_name || 'this search';
@@ -710,22 +713,14 @@ function Dashboard({ user, onLogout }) {
                     <div style={{ ...S.card, background:'rgba(245,158,11,0.05)', border:'1px solid rgba(245,158,11,0.2)', display:'flex', alignItems:'center', gap:14, padding:'16px 20px' }}>
                       <span style={{ color:'#F59E0B', flexShrink:0 }}><Icon n="alertTriangle" s={20} /></span>
                       <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>
-                          {items.length} low-confidence {items.length === 1 ? 'match' : 'matches'} found for "{wlName}"
-                        </div>
+                        <div style={{ fontSize:13, fontWeight:600, marginBottom:2 }}>{items.length} low-confidence {items.length === 1 ? 'match' : 'matches'} found for "{wlName}"</div>
                         <div style={{ fontSize:12, color:'#71717A' }}>These results scored below 60 — they may be loosely related. Want to see them anyway?</div>
                       </div>
-                      <button onClick={() => setShowLowConfidence(prev => ({ ...prev, [wlKey]: true }))} style={{ ...S.btnGhost, flexShrink:0, fontSize:12, whiteSpace:'nowrap' }}>
-                        Show anyway
-                      </button>
+                      <button onClick={() => setShowLowConfidence(prev => ({ ...prev, [wlKey]: true }))} style={{ ...S.btnGhost, flexShrink:0, fontSize:12, whiteSpace:'nowrap' }}>Show anyway</button>
                     </div>
                   )}
                   {isShowing && items.map(m => <MatchCard key={m.id} match={m} onFeedback={handleFeedback} dimmed={true} />)}
-                  {isShowing && (
-                    <button onClick={() => setShowLowConfidence(prev => ({ ...prev, [wlKey]: false }))} style={{ ...S.btnGhost, fontSize:12, marginBottom:12 }}>
-                      Hide low-confidence results
-                    </button>
-                  )}
+                  {isShowing && <button onClick={() => setShowLowConfidence(prev => ({ ...prev, [wlKey]: false }))} style={{ ...S.btnGhost, fontSize:12, marginBottom:12 }}>Hide low-confidence results</button>}
                 </div>
               );
             })}
