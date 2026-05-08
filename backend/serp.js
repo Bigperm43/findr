@@ -97,6 +97,34 @@ const EXCLUDE_SITES = [
 
 const GLOBAL_COUNTRIES = ["australia", "usa", "uk", "canada", "new zealand"];
 
+// Source favicon map for clean fallback images
+const SOURCE_ICONS = {
+  "ebay.com": "https://ir.ebaystatic.com/pictures/aw/pics/favicon.ico",
+  "ebay.com.au": "https://ir.ebaystatic.com/pictures/aw/pics/favicon.ico",
+  "ebay.co.uk": "https://ir.ebaystatic.com/pictures/aw/pics/favicon.ico",
+  "gumtree.com.au": "https://www.gumtree.com.au/favicon.ico",
+  "gumtree.com": "https://www.gumtree.com/favicon.ico",
+  "facebook.com": "https://www.facebook.com/favicon.ico",
+  "carsales.com.au": "https://www.carsales.com.au/favicon.ico",
+  "trademe.co.nz": "https://www.trademe.co.nz/favicon.ico",
+  "kijiji.ca": "https://www.kijiji.ca/favicon.ico",
+  "craigslist.org": "https://www.craigslist.org/favicon.ico",
+};
+
+function extractDomain(url) {
+  try { return new URL(url).hostname.replace("www.", ""); } catch { return ""; }
+}
+
+function getFallbackImage(url) {
+  const domain = extractDomain(url);
+  // Check known sources first
+  for (const [key, icon] of Object.entries(SOURCE_ICONS)) {
+    if (domain.includes(key)) return icon;
+  }
+  // Generic Google favicon fallback
+  return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+}
+
 async function search({ query, priceMin, priceMax, country = "any", mode = "global" }) {
   if (!process.env.SERP_API_KEY) throw new Error("SERP_API_KEY not set");
 
@@ -171,18 +199,29 @@ async function searchSingle({ query, priceMin, priceMax, country = "any", mode =
     const items = r.data.organic_results || [];
     console.log("[serp] Got " + items.length + " results from " + countryKey);
 
-    return items.map((item, i) => ({
-      sourceId: "serp-" + i + "-" + Date.now() + Math.random(),
-      title: item.title || "Unknown",
-      price: extractPrice(item.snippet || item.title),
-      currency: countryKey === "australia" ? "AUD" : countryKey === "uk" ? "GBP" : "USD",
-      location: item.displayed_link || null,
-      imageUrl: item.thumbnail || null,
-      listingUrl: item.link,
-      condition: null,
-      source: extractSource(item.link),
-      snippet: item.snippet || null,
-    }));
+    return items.map((item, i) => {
+      // Try every possible image field SerpAPI might return
+      const imageUrl =
+        item.thumbnail ||
+        item.rich_snippet?.top?.extensions?.[0] ||
+        item.pagemap?.cse_image?.[0]?.src ||
+        item.pagemap?.cse_thumbnail?.[0]?.src ||
+        item.pagemap?.product?.[0]?.image ||
+        getFallbackImage(item.link);
+
+      return {
+        sourceId: "serp-" + i + "-" + Date.now() + Math.random(),
+        title: item.title || "Unknown",
+        price: extractPrice(item.snippet || item.title),
+        currency: countryKey === "australia" ? "AUD" : countryKey === "uk" ? "GBP" : "USD",
+        location: item.displayed_link || null,
+        imageUrl,
+        listingUrl: item.link,
+        condition: null,
+        source: extractSource(item.link),
+        snippet: item.snippet || null,
+      };
+    });
   } catch (err) {
     console.error("[serp] Error for " + countryKey + ": " + err.message);
     throw err;

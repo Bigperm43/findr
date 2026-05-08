@@ -7,6 +7,14 @@ const { scanOne, runBatchScan, getLastStatus } = require('./scanner');
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'middlemen-dev-secret';
 
+// ── TIER LIMITS ───────────────────────────────────────────────────────────────
+const TIER_LIMITS = {
+  free:     { watchlists: 3 },
+  hunter:   { watchlists: 15 },
+  predator: { watchlists: 50 },
+  pro:      { watchlists: 150 },
+};
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
@@ -18,14 +26,30 @@ function requireAuth(req, res, next) {
 }
 
 // ── AUTH ──────────────────────────────────────────────────────────────────────
+router.post('/auth/register', async (req, res) => {
+  const { email, password } = req.body;
+  if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+  const existing = dbGet('SELECT id FROM users WHERE email = ?', [email.toLowerCase().trim()]);
+  if (existing) return res.status(409).json({ error: 'An account with this email already exists' });
+  const password_hash = await bcrypt.hash(password, 10);
+  const result = dbRun(
+    'INSERT INTO users (email, password_hash, tier) VALUES (?, ?, ?)',
+    [email.toLowerCase().trim(), password_hash, 'free']
+  );
+  const user = dbGet('SELECT id, email, tier FROM users WHERE id = ?', [result.lastInsertRowid]);
+  const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
+  res.status(201).json({ token, user: { id: user.id, email: user.email, tier: user.tier } });
+});
+
 router.post('/auth/login', (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
-  const user = dbGet('SELECT * FROM users WHERE email = ?', [email]);
+  const user = dbGet('SELECT * FROM users WHERE email = ?', [email.toLowerCase().trim()]);
   if (!user || !bcrypt.compareSync(password, user.password_hash))
     return res.status(401).json({ error: 'Invalid credentials' });
   const token = jwt.sign({ userId: user.id, email: user.email }, JWT_SECRET, { expiresIn: '7d' });
-  res.json({ token, user: { id: user.id, email: user.email } });
+  res.json({ token, user: { id: user.id, email: user.email, tier: user.tier } });
 });
 
 router.get('/auth/me', requireAuth, (req, res) => {
@@ -46,6 +70,22 @@ router.get('/watchlists', requireAuth, (req, res) => {
 router.post('/watchlists', requireAuth, (req, res) => {
   const { name, description, keywords, price_min, price_max, country, mode } = req.body;
   if (!name || !keywords) return res.status(400).json({ error: 'Name and keywords required' });
+
+  // ── Enforce tier watchlist limit ──
+  const user = dbGet('SELECT tier FROM users WHERE id = ?', [req.userId]);
+  const tier = user?.tier || 'free';
+  const limit = TIER_LIMITS[tier]?.watchlists ?? 3;
+  const current = dbGet('SELECT COUNT(*) as c FROM watchlists WHERE user_id = ?', [req.userId])?.c || 0;
+  if (current >= limit) {
+    return res.status(403).json({
+      error: 'limit_reached',
+      message: `You've reached the ${limit} search limit on the ${tier} plan. Upgrade to add more.`,
+      current,
+      limit,
+      tier,
+    });
+  }
+
   const result = dbRun(
     `INSERT INTO watchlists (user_id, name, description, keywords, price_min, price_max, country, mode)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
