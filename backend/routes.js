@@ -15,6 +15,14 @@ const TIER_LIMITS = {
   pro:      { watchlists: 150 },
 };
 
+// ── HELPER: always save keywords as a plain string ────────────────────────────
+function sanitizeKeywords(keywords) {
+  if (typeof keywords === 'string') return keywords;
+  if (Array.isArray(keywords)) return keywords.join(' ');
+  if (keywords && typeof keywords === 'object') return Object.values(keywords).join(' ');
+  return String(keywords || '');
+}
+
 function requireAuth(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith('Bearer ')) return res.status(401).json({ error: 'Unauthorized' });
@@ -86,10 +94,12 @@ router.post('/watchlists', requireAuth, (req, res) => {
     });
   }
 
+  const safeKeywords = sanitizeKeywords(keywords);
+
   const result = dbRun(
     `INSERT INTO watchlists (user_id, name, description, keywords, price_min, price_max, country, mode)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [req.userId, name, description||null, keywords,
+    [req.userId, name, description||null, safeKeywords,
      price_min||null, price_max||null,
      country||'any', mode||'local']
   );
@@ -100,12 +110,13 @@ router.put('/watchlists/:id', requireAuth, (req, res) => {
   const wl = dbGet('SELECT * FROM watchlists WHERE id = ? AND user_id = ?', [req.params.id, req.userId]);
   if (!wl) return res.status(404).json({ error: 'Not found' });
   const { name, description, keywords, price_min, price_max, country, mode, status } = req.body;
+  const safeKeywords = keywords ? sanitizeKeywords(keywords) : null;
   dbRun(`UPDATE watchlists SET
     name=COALESCE(?,name), description=COALESCE(?,description),
     keywords=COALESCE(?,keywords), price_min=?, price_max=?,
     country=COALESCE(?,country), mode=COALESCE(?,mode), status=COALESCE(?,status)
     WHERE id=?`,
-    [name||null, description||null, keywords||null,
+    [name||null, description||null, safeKeywords,
      price_min??null, price_max??null,
      country||null, mode||null, status||null, req.params.id]
   );
@@ -131,7 +142,7 @@ router.post('/watchlists/:id/scan', requireAuth, async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/scan/all', requireAuth, async (req, res) => {
+router.post('/watchlists/all/scan', requireAuth, async (req, res) => {
   try {
     const result = await runBatchScan();
     res.json({ success: true, ...result });
