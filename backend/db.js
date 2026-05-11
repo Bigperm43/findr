@@ -1,4 +1,4 @@
-const path = require('path');
+﻿const path = require('path');
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
 const DB_PATH = path.join(__dirname, 'middlemen.db');
@@ -11,6 +11,7 @@ async function initDb() {
   if (fs.existsSync(DB_PATH)) { db = new SQL.Database(fs.readFileSync(DB_PATH)); }
   else { db = new SQL.Database(); }
   initSchema();
+  runMigrations();
   saveDb();
   return db;
 }
@@ -28,7 +29,6 @@ function initSchema() {
   db.run(`CREATE TABLE IF NOT EXISTS watch_hits (id INTEGER PRIMARY KEY AUTOINCREMENT, watchlist_id INTEGER NOT NULL, listing_id INTEGER NOT NULL, score INTEGER DEFAULT 0, score_breakdown TEXT, feedback TEXT, seen INTEGER DEFAULT 0, notified INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')), UNIQUE(watchlist_id, listing_id))`);
   db.run(`CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, watchlist_id INTEGER, hit_id INTEGER, title TEXT NOT NULL, message TEXT, listing_url TEXT, source TEXT, price REAL, currency TEXT, score INTEGER, read INTEGER DEFAULT 0, created_at TEXT DEFAULT (datetime('now')))`);
   db.run(`CREATE TABLE IF NOT EXISTS scan_log (id INTEGER PRIMARY KEY AUTOINCREMENT, batch_id TEXT, queries_run INTEGER DEFAULT 0, cache_hits INTEGER DEFAULT 0, listings_found INTEGER DEFAULT 0, new_hits INTEGER DEFAULT 0, watches_processed INTEGER DEFAULT 0, error TEXT, duration_ms INTEGER, scanned_at TEXT DEFAULT (datetime('now')))`);
-
   const res = db.exec("SELECT COUNT(*) as c FROM users");
   const count = res[0]?.values[0][0] || 0;
   if (count === 0) {
@@ -36,8 +36,18 @@ function initSchema() {
     db.run("INSERT INTO users (email, password_hash, tier) VALUES (?, ?, ?)", ['admin@middlemen.local', hash, 'pro']);
     console.log('Default user: admin@middlemen.local / password123');
   }
-  // Always ensure admin is pro
   db.run("UPDATE users SET tier = 'pro' WHERE email = 'admin@middlemen.local'");
+}
+
+function runMigrations() {
+  try { db.run(`ALTER TABLE watch_hits ADD COLUMN feedback_at TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE watchlists ADD COLUMN last_found_at TEXT`); } catch(e) {}
+  try { db.run(`ALTER TABLE watchlists ADD COLUMN last_match_count INTEGER NOT NULL DEFAULT 0`); } catch(e) {}
+  try { db.run(`ALTER TABLE watchlists ADD COLUMN last_still_searching_at TEXT`); } catch(e) {}
+  db.run(`CREATE TABLE IF NOT EXISTS watchlist_negatives (id INTEGER PRIMARY KEY AUTOINCREMENT, watchlist_id INTEGER NOT NULL REFERENCES watchlists(id), pattern TEXT NOT NULL, source TEXT NOT NULL DEFAULT 'user_dismiss', created_at TEXT DEFAULT (datetime('now')), UNIQUE(watchlist_id, pattern))`);
+  db.run(`CREATE INDEX IF NOT EXISTS watchlist_negatives_wid_idx ON watchlist_negatives (watchlist_id)`);
+  db.run(`CREATE INDEX IF NOT EXISTS matches_watchlist_feedback_idx ON watch_hits (watchlist_id, feedback)`);
+  console.log('[db] Migrations applied');
 }
 
 function dbGet(sql, params = []) {
